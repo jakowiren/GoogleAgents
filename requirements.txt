@@ -1,0 +1,20 @@
+# Core dependencies
+google-adk>=0.1.0  # Google Agent Development Kit
+litellm>=1.0.0     # Multi-model LLM support
+python-dotenv>=1.0.0  # Environment variable management
+
+# API clients
+google-cloud-aiplatform>=1.0.0  # For Vertex AI/Gemini
+openai>=1.0.0                   # For OpenAI models
+anthropic>=0.5.0                # For Claude models
+
+# Utilities
+zoneinfo>=0.2.1    # Timezone handling
+datetime>=5.0      # Date/time utilities
+typing>=3.7.4      # Type hints
+pydantic>=2.0.0    # Data validation
+
+# Development tools (optional)
+pytest>=7.0.0      # Testing
+black>=22.0.0      # Code formatting
+flake8>=4.0.0      # Linting 
