@@ -42,6 +42,10 @@ ENV/
 .env.test.local
 .env.production.local
 
+# Project specific
+multi_tool_agent/data/
+multi_tool_agent/vectorstores/
+
 # Logs
 *.log
 logs/ 

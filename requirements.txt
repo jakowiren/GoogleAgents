@@ -2,15 +2,20 @@
 google-adk>=0.1.0  # Google Agent Development Kit
 litellm>=1.0.0     # Multi-model LLM support
 python-dotenv>=1.0.0  # Environment variable management
+requests>=2.31.0   # HTTP requests library
+
+# LangChain dependencies
+langchain>=0.1.0   # LangChain framework
+langchain-community>=0.0.10  # LangChain community tools
+gitpython>=3.1.40  # Required for GitLoader
+chromadb>=0.4.22   # Vector store for document analysis
+faiss-cpu>=1.7.4   # Vector similarity search
 
 # API clients
 google-cloud-aiplatform>=1.0.0  # For Vertex AI/Gemini
 openai>=1.0.0                   # For OpenAI models
 anthropic>=0.5.0                # For Claude models
 
-# Utilities
-zoneinfo>=0.2.1    # Timezone handling
-datetime>=5.0      # Date/time utilities
 typing>=3.7.4      # Type hints
 pydantic>=2.0.0    # Data validation
 
