@@ -6,7 +6,12 @@ from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 from typing import Optional
 from .constants import MODEL_GEMINI_2_0_FLASH, MODEL_GPT_4O, MODEL_CLAUDE_SONNET
-from .tools import fetch_github_repo, analyze_code_with_vectorstore, get_repository_metadata
+from .tools import (
+    fetch_github_repo, 
+    analyze_code_with_vectorstore, 
+    get_repository_metadata,
+    generate_analysis_report
+)
 import warnings
 from dotenv import load_dotenv
 import logging
@@ -141,12 +146,52 @@ code_analysis_agent = Agent(
     output_key="last_analysis"
 )
 
-# Update Root agent to handle metadata queries
+# Create Report agent
+report_agent = Agent(
+    name="report_agent_v1",
+    model=LiteLlm(model=MODEL_GPT_4O),
+    description="Generates comprehensive reports analyzing code repositories from multiple perspectives.",
+    instruction="You are a report generation specialist that creates detailed analyses of code repositories. "
+                "Your primary goal is to generate insightful reports that combine code analysis with metadata. "
+                "When asked to analyze a repository:\n"
+                "1. Plan your analysis approach:\n"
+                "   - Define key aspects to analyze (architecture, patterns, etc.)\n"
+                "   - Create specific queries for each aspect\n"
+                "   - Consider both implementation and metadata\n"
+                "2. Generate reports using these query types:\n"
+                "   a) Architecture Analysis:\n"
+                "      - 'What are the main components and their relationships?'\n"
+                "      - 'How is the code organized and structured?'\n"
+                "   b) Implementation Details:\n"
+                "      - 'How are key features implemented?'\n"
+                "      - 'What design patterns are used?'\n"
+                "   c) Code Quality:\n"
+                "      - 'How is error handling implemented?'\n"
+                "      - 'What testing approaches are used?'\n"
+                "   d) Development History:\n"
+                "      - 'How has the code evolved?'\n"
+                "      - 'What are the recent changes?'\n"
+                "3. Use the 'generate_analysis_report' tool with your queries\n"
+                "4. When presenting results:\n"
+                "   - Highlight key findings and patterns\n"
+                "   - Provide context for technical details\n"
+                "   - Include relevant metadata insights\n"
+                "   - Suggest potential improvements\n"
+                "5. For specific report requests:\n"
+                "   - Focus queries on the requested aspects\n"
+                "   - Provide detailed analysis in those areas\n"
+                "Remember that a repository must be fetched first before you can analyze it.",
+    tools=[generate_analysis_report],
+    before_model_callback=block_keyword_guardrail,
+    output_key="last_report"
+)
+
+# Update Root agent to include report generation
 root_agent = Agent(
     name="root_agent_v1",
     model=LiteLlm(model=MODEL_GPT_4O),
-    description="Orchestrates GitHub repository fetching, code analysis, and metadata exploration tasks.",
-    instruction="You are a code exploration assistant that coordinates repository fetching, analysis, and metadata tasks. "
+    description="Orchestrates GitHub repository fetching, analysis, metadata exploration, and report generation tasks.",
+    instruction="You are a code exploration assistant that coordinates repository fetching, analysis, metadata, and reporting tasks. "
                 "Your role is to:\n"
                 "1. For GitHub repository URLs (containing 'github.com'):\n"
                 "   - Delegate to the fetch agent to download and prepare the repository\n"
@@ -157,15 +202,19 @@ root_agent = Agent(
                 "3. For metadata questions (about commits, branches, tags, history):\n"
                 "   - Delegate to the metadata agent for detailed Git information\n"
                 "   - The metadata agent can provide commit history, branch details, and more\n"
-                "4. For unclear queries:\n"
-                "   - Explain the three main operations available:\n"
+                "4. For report requests (containing words like 'report', 'analyze', 'summarize'):\n"
+                "   - Delegate to the report agent to generate comprehensive analysis\n"
+                "   - The report agent will combine code analysis with metadata insights\n"
+                "5. For unclear queries:\n"
+                "   - Explain the four main operations available:\n"
                 "     * Fetching repositories\n"
                 "     * Analyzing code implementation\n"
                 "     * Exploring Git metadata\n"
+                "     * Generating analysis reports\n"
                 "   - Guide the user on how to rephrase their request\n"
-                "5. Always maintain context between interactions and provide clear guidance.",
+                "6. Always maintain context between interactions and provide clear guidance.",
     tools=[],  # Root agent doesn't need tools, it delegates to sub-agents
-    sub_agents=[github_fetch_agent, code_analysis_agent, git_metadata_agent],
+    sub_agents=[github_fetch_agent, code_analysis_agent, git_metadata_agent, report_agent],
     before_model_callback=block_keyword_guardrail,
     output_key="last_delegation"
 )

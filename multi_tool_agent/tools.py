@@ -497,4 +497,123 @@ def get_repository_metadata(repo_name: Optional[str], tool_context: ToolContext)
     
     return result
 
+class ReportGenerator(BaseTool):
+    """LangChain tool for generating comprehensive code analysis reports."""
+    def __init__(self):
+        super().__init__(
+            name="report_generator",
+            description="Generates detailed reports combining code analysis, metadata, and repository insights.",
+            func=self._run
+        )
+    
+    def _run(
+        self, 
+        analysis_queries: List[str],
+        run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> Dict:
+        """Generates a comprehensive report by analyzing code with multiple queries."""
+        try:
+            # Initialize analyzers
+            code_analyzer = CodeAnalyzer()
+            metadata_retriever = GitMetadataRetriever()
+            
+            report_sections = []
+            metadata_overview = None
+            
+            # First, get repository metadata
+            metadata_result = metadata_retriever._run()
+            if metadata_result["status"] == "success":
+                metadata_overview = {
+                    "repository": metadata_result["repository_name"],
+                    "last_commit": metadata_result["git_metadata"]["current_commit"],
+                    "branch": metadata_result["git_metadata"]["branch_info"]["active_branch"],
+                    "fetch_time": metadata_result["git_metadata"]["fetch_time"]
+                }
+            
+            # Run each analysis query
+            for query in analysis_queries:
+                analysis_result = code_analyzer._run(query)
+                if analysis_result["status"] == "success":
+                    section = {
+                        "query": query,
+                        "findings": [],
+                        "relevance_summary": []
+                    }
+                    
+                    # Process results
+                    for result in analysis_result.get("results", []):
+                        section["findings"].append({
+                            "content": result["content"],
+                            "file": result["metadata"].get("source", "Unknown"),
+                            "relevance_score": result["relevance_score"]
+                        })
+                        
+                        # Add relevance summary for top matches
+                        if result["relevance_score"] < 1.0:  # Lower is better
+                            section["relevance_summary"].append(
+                                f"Found relevant code in {result['metadata'].get('source', 'Unknown')} "
+                                f"(score: {result['relevance_score']:.3f})"
+                            )
+                    
+                    report_sections.append(section)
+            
+            # Compile the final report
+            report = {
+                "status": "success",
+                "metadata": metadata_overview,
+                "sections": report_sections,
+                "summary": {
+                    "total_queries": len(analysis_queries),
+                    "successful_queries": len([s for s in report_sections if s["findings"]]),
+                    "total_findings": sum(len(s["findings"]) for s in report_sections),
+                    "generated_at": time.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            }
+            
+            # Save the report
+            os.makedirs(os.path.join(DATA_DIR, "reports"), exist_ok=True)
+            report_file = os.path.join(
+                DATA_DIR, 
+                "reports", 
+                f"analysis_report_{int(time.time())}.json"
+            )
+            with open(report_file, 'w') as f:
+                json.dump(report, f, indent=2)
+            
+            report["report_file"] = report_file
+            return report
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error_message": f"Error generating report: {str(e)}"
+            }
+
+    async def _arun(
+        self,
+        analysis_queries: List[str],
+        run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> Dict:
+        """Async implementation - we just call the sync version for now."""
+        return self._run(analysis_queries, run_manager)
+
+def generate_analysis_report(analysis_queries: List[str], tool_context: ToolContext) -> dict:
+    """Tool wrapper for ReportGenerator that handles state management."""
+    print(f"--- Tool: generate_analysis_report called with {len(analysis_queries)} queries ---")
+    
+    generator = ReportGenerator()
+    result = generator._run(analysis_queries)
+    
+    if result["status"] == "success":
+        # Store the generated report in the tool context
+        tool_context.state["last_generated_report"] = result
+        
+        # Also store individual section results for future reference
+        tool_context.state["report_sections"] = {
+            section["query"]: section["findings"]
+            for section in result["sections"]
+        }
+    
+    return result
+
 

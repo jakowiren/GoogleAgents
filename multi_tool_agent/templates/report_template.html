@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report.metadata.repository }} Code Analysis Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .metadata {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 15px;
+            border-left: 3px solid #3498db;
+        }
+        .finding {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .relevance {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .summary {
+            background-color: #e8f4f8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        code {
+            background-color: #f7f9fa;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f7f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ report.metadata.repository }} Code Analysis Report</h1>
+    
+    <div class="metadata">
+        <h2>Repository Information</h2>
+        <p><strong>Last Commit:</strong> {{ report.metadata.last_commit.message }}</p>
+        <p><strong>Author:</strong> {{ report.metadata.last_commit.author }}</p>
+        <p><strong>Branch:</strong> {{ report.metadata.branch }}</p>
+        <p><strong>Generated:</strong> {{ report.summary.generated_at }}</p>
+    </div>
+
+    <div class="summary">
+        <h2>Analysis Summary</h2>
+        <p><strong>Total Queries:</strong> {{ report.summary.total_queries }}</p>
+        <p><strong>Successful Queries:</strong> {{ report.summary.successful_queries }}</p>
+        <p><strong>Total Findings:</strong> {{ report.summary.total_findings }}</p>
+    </div>
+
+    {% for section in report.sections %}
+    <div class="section">
+        <h2>{{ section.query }}</h2>
+        {% for finding in section.findings %}
+        <div class="finding">
+            <pre><code>{{ finding.content }}</code></pre>
+            <p><strong>File:</strong> {{ finding.file }}</p>
+            <p class="relevance">Relevance Score: {{ "%.3f"|format(finding.relevance_score) }}</p>
+        </div>
+        {% endfor %}
+        
+        {% if section.relevance_summary %}
+        <div class="relevance">
+            <h3>Relevance Summary</h3>
+            <ul>
+            {% for summary in section.relevance_summary %}
+                <li>{{ summary }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</body>
+</html>
